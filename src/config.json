@@ -1,0 +1,35 @@
+{
+    "name": "Ansible",
+    "type": "executer",
+    "description": "Kaholo Plugin for Ansible",
+    "exposeRoute": false,
+    "execProgram": "node",
+    "imgUrl": "icon.png",
+    "main": "app.js",
+    "version": "1.0.0",
+    "methods": [{
+        "name": "executeAnsible",
+        "viewName": "Execute Ansilbe",
+        "params": [{
+            "name": "PARAMS",
+            "viewName": "all parameters and flags (as string)",
+            "type": "string"
+        }]
+    },
+    {
+        "name" : "executeAnsiblePlaybook",
+        "viewName" : "Execute ansilbe playbook",
+        "params":[
+            {
+                "name": "YAML",
+                "viewName": "YAML path",
+                "type": "string"
+            },
+            {
+                "name": "PARAMS",
+                "viewName": "all parameters and flags (as string)",
+                "type": "string"
+            }
+        ]
+    }]
+}
