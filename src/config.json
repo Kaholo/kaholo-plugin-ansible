@@ -7,28 +7,40 @@
     "imgUrl": "icon.png",
     "main": "app.js",
     "version": "1.0.0",
-    "methods": [{
-        "name": "executeAnsible",
-        "viewName": "Execute Ansilbe",
-        "params": [{
-            "name": "PARAMS",
-            "viewName": "all parameters and flags (as string)",
-            "type": "string"
-        }]
-    },
+    "methods": [
     {
-        "name" : "executeAnsiblePlaybook",
-        "viewName" : "Execute ansilbe playbook",
+        "name" : "runPlaybook",
+        "viewName" : "Run Playbook",
         "params":[
             {
-                "name": "YAML",
-                "viewName": "YAML path",
+                "name": "playbookPath",
+                "viewName": "Playbook Path",
                 "type": "string"
             },
             {
-                "name": "PARAMS",
-                "viewName": "all parameters and flags (as string)",
+                "name": "inventories",
+                "viewName": "Inventories",
+                "type": "text"
+            },
+            {
+                "name": "sshUsername",
+                "viewName": "SSH Username",
                 "type": "string"
+            },
+            {
+                "name": "sshPass",
+                "viewName": "SSH Password",
+                "type": "vault"
+            },
+            {
+                "name": "modules",
+                "viewName": "Modules",
+                "type": "text"
+            },
+            {
+                "name": "vars",
+                "viewName": "Variables",
+                "type": "text"
             }
         ]
     }]
