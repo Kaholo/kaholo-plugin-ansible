@@ -25,11 +25,12 @@ function getAnsibleCmd(action){
     // if inventories parameter was passed parse it to the cli argument format
     const inventories = (action.params.inventories || ``).trim();
     if (inventories){
-        inventoriess.split(`\n`).forEach(inventory => {
-            cmdArgs.push(`-i ${inventory.trim()}`);
+        inventories.split(`\n`).forEach(function(inventory) {
+            if (inventory){
+                cmdArgs.push(`-i ${inventory.trim()}`);
+            }
         });
     }
-
     let vars = {};
     // check if the variables parameter was passed. If so, parse it to an object
     const paramVars = (action.params.vars || ``).trim();
@@ -40,7 +41,7 @@ function getAnsibleCmd(action){
         } 
         catch { 
             // if we catched an error then check the variables paramater was passed as key=value pairs and parse it
-            paramVars.split(`\n`).forEach(paramVar => {
+            paramVars.split(`\n`).forEach(function(paramVar) {
                 const sep = paramVar.indexOf(`=`);
                 if (sep === -1){
                     throw "vars were passed in a bad format";
@@ -51,8 +52,8 @@ function getAnsibleCmd(action){
     }
     // check if ssh username was passed. If so also check for ssh pass, and add it to the variables object
     const sshUser = (action.params.sshUsername || ``).trim();
+    const sshPass = (action.params.sshPass || ``).trim();
     if (sshUser){
-        const sshPass = (action.params.sshPass || ``).trim();
         if (!sshPass){
             throw "SSH password was expected but not provided";
         }
@@ -60,12 +61,17 @@ function getAnsibleCmd(action){
         vars.ansible_user = sshUser;
         vars.ansible_ssh_pass = sshPass;
     }
+    else if (sshPass){
+        throw "SSH username was expected but not provided";
+    }
     // check if modules paramater was passed, and if so parse it to the cli argument format
     const modules = (action.params.modules || ``).trim();
     if (modules){
-        cmdArgs.push(`-m ${modules.split(`\n`).map(mod => {
-            return mod.trim();
-        }).join(`,`)}`)
+       modules.split(`\n`).forEach(mod => {
+            if (mod){
+                cmdArgs.push(`-M ${mod.trim()}`)
+            }
+       });
     }
     // if the variables object is not empty, parse it to the cli argument format
     const varsArg = JSON.stringify(vars);
@@ -78,10 +84,11 @@ function getAnsibleCmd(action){
 
 async function runPlaybook(action){
     const cmd = getAnsibleCmd(action);
-	return runCLICommand(cmd);
+    return runCLICommand(cmd);
 }
 
 
 module.exports = {
-    runPlaybook
+    runPlaybook,
+    getAnsibleCmd
 };
