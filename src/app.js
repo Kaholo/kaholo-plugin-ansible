@@ -35,19 +35,25 @@ function getAnsibleCmd(action){
     // check if the variables parameter was passed. If so, parse it to an object
     const paramVars = (action.params.vars || ``).trim();
     if (paramVars){
-        try {
-            // if the variables parameter was passed as JSON it will pass
-            vars = JSON.parse(paramVars);
-        } 
-        catch { 
-            // if we catched an error then check the variables paramater was passed as key=value pairs and parse it
+        if (typeof paramVars === "string"){
+            // if the variables paramater was passed as string, suppose format is key=value pairs and parse it
             paramVars.split(`\n`).forEach(function(paramVar) {
-                const sep = paramVar.indexOf(`=`);
-                if (sep === -1){
-                    throw "vars were passed in a bad format";
+                const [key,...values] = paramVar.split(`=`);
+                if (!values){
+                    throw "variables were passed in a bad format";
                 }
-                vars[paramVar.substring(0, sep)] = paramVar.substring(sep + 1);
+                vars[key] = values.join('=');
             });
+        }
+        else if (typeof paramVars === "object"){    
+            for (var key in paramVars){
+                if (paramVars.hasOwnProperty(key)) {
+                    vars[key] = paramVars[key];
+                }
+            }
+        }
+        else {
+            throw "variables wasn't passed as string or object";
         }
     }
     // check if ssh username was passed. If so also check for ssh pass, and add it to the variables object
