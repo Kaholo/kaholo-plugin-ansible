@@ -3,7 +3,7 @@ Kaholo plugin for Ansible.
 
 ## How to use:
 After you install the plugin on Kaholo,
-make sure your agent runs on a linux enviroment and has Ansible insttaled.
+make sure your agent runs on a linux enviroment and has Ansible installed.
 
 ## Method: Run Playbook
 Execute an Ansible playbook. 
