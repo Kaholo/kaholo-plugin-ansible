@@ -6,7 +6,7 @@
     "execProgram": "node",
     "imgUrl": "icon.png",
     "main": "app.js",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "methods": [
     {
         "name" : "runPlaybook",
@@ -18,11 +18,6 @@
                 "type": "string"
             },
             {
-                "name": "inventories",
-                "viewName": "Inventories",
-                "type": "text"
-            },
-            {
                 "name": "sshUsername",
                 "viewName": "SSH Username",
                 "type": "string"
@@ -31,6 +26,16 @@
                 "name": "sshPass",
                 "viewName": "SSH Password",
                 "type": "vault"
+            },
+            {
+                "name": "inventories",
+                "viewName": "Inventories",
+                "type": "text"
+            },
+            {
+                "name": "limit",
+                "viewName": "Limit",
+                "type": "text"
             },
             {
                 "name": "modules",
