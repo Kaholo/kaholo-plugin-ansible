@@ -35,17 +35,27 @@ function parseVars(varsParam){
     return {};
 }
 
-async function runCLICommand(command){
+async function runCLICommand(command, args){
 	return new Promise((resolve,reject) => {
-		child_process.exec(command, (error, stdout, stderr) => {
-			if (error) {
-			   return reject(`exec error: ${error}`);
-			}
-			if (stderr) {
-				console.log(`stderr: ${stderr}`);
-			}
-			return resolve(stdout);
-		});
+		const spawn = child_process.spawn(command, args);
+        var stdout = "", stderr = "";
+        spawn.stdout.on('data', (data) => {
+            stdout += data;
+        });
+        
+        spawn.stderr.on('data', (data) => {
+            stderr += data;
+        });
+        
+        spawn.on('error', (err) => {
+            return reject(err);
+        });
+
+        spawn.on('close', (code) => {
+            if(code === 0)
+				return resolve((stderr ? stderr + "\n" : "") + stdout);
+			reject({code, stdout, stderr});
+        });
 	})
 }
 
