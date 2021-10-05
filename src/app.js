@@ -1,8 +1,8 @@
 const { textToArgs, runCLICommand, parseVars } = require('./helpers');
 
 async function runPlaybook(action){
-    const cmd = getAnsibleCmd(action);
-    return runCLICommand(cmd);
+    const cmdArgs = getAnsibleCmd(action);
+    return runCLICommand(`ansible-playbook`, cmdArgs);
 }
 
 function setSshInVars(action, vars){
@@ -42,10 +42,10 @@ function getAnsibleCmd(action){
     // if the variables object is not empty, parse it to the cli argument format
     const varsArg = JSON.stringify(vars);
     if (varsArg !== `{}`){
-        cmdArgs.push("--extra-vars", varsArg)
+        cmdArgs.push("-e", varsArg);
     }
     
-    return `ansible-playbook ${cmdArgs.join(` `)}`;
+    return cmdArgs;
 }
 
 module.exports = {
