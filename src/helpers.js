@@ -35,6 +35,19 @@ function parseVars(varsParam){
     return {};
 }
 
+function joinIPsWithComma(text, argsArr) {
+    if(text) {
+        let res = '-i ';
+        text.split('\n').forEach(function(arg){
+            const fixed = arg.trim();
+            if(fixed) {
+                res += `${fixed}, `; 
+            }
+        })
+        argsArr.push(res);
+    }
+}
+
 async function runCLICommand(command, args){
 	return new Promise((resolve,reject) => {
 		const spawn = child_process.spawn(command, args);
@@ -62,5 +75,6 @@ async function runCLICommand(command, args){
 module.exports = {
     textToArgs,
     runCLICommand,
-    parseVars
+    parseVars,
+    joinIPsWithComma
 }
