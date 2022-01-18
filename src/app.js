@@ -1,4 +1,4 @@
-const { textToArgs, runCLICommand, parseVars } = require('./helpers');
+const { textToArgs, runCLICommand, parseVars, joinIPsWithComma } = require('./helpers');
 
 async function runPlaybook(action){
     const cmdArgs = getAnsibleCmd(action);
@@ -24,8 +24,9 @@ function getAnsibleCmd(action){
     }
     // create an array of args to pass in the command
     let cmdArgs = [playbookPath];
-    // push inventories and limit parameter to args
-    textToArgs(action.params.inventories, '-i', cmdArgs);
+    // push inventories, ips, limit parameter to args
+    textToArgs(action.params.inventoryFiles, '-i', cmdArgs);
+    joinIPsWithComma(action.params.inventoryIPs, cmdArgs);
     textToArgs(action.params.limit, '-l', cmdArgs);
     // parse the vars parameter to an object
     let vars = parseVars(action.params.vars);
