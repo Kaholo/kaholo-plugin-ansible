@@ -51,7 +51,7 @@
                 "name": "inventoryIPs",
                 "viewName": "Inventory IPs/Hosts",
                 "placeholder": "10.0.0.1\nexample.com",
-                "description": "Each new line can be an IP or Hostname. NOTE: Requires 'hosts: all' in your playbook.",
+                "description": "Each new line can be an IP or Hostname. Requires 'hosts: all' in your playbook.",
                 "type": "text"
             },
             {
