@@ -6,20 +6,14 @@ async function runPlaybook(action){
 }
 
 function setSshInVars(action, vars){
-    // check if ssh username was passed. If so also check for ssh pass, and add it to the variables object
+    // non of these fields are required, check if the value is present. If so add it to the variables object
     const sshUser = (action.params.sshUsername || ``).trim();
     const sshPass = (action.params.sshPass || ``).trim();
-    if (sshUser){
-        if (!sshPass){
-            throw "SSH password was expected but not provided";
-        }
-        vars.ansible_connection = "ssh";
-        vars.ansible_user = sshUser;
-        vars.ansible_ssh_pass = sshPass;
-    }
-    else if (sshPass){
-        throw "SSH username was expected but not provided";
-    }
+    const sshKeyPath = (action.params.sshKeyPath || ``).trim();
+    
+    if (sshUser) vars.ansible_user = sshUser;
+    if (sshPass) { vars.ansible_ssh_pass = sshPass; vars.ansible_connection = "ssh"; }
+    if (sshKeyPath) { vars.ansible_ssh_private_key_file = sshKeyPath; vars.ansible_connection = "ssh"; }
 }
 
 function getAnsibleCmd(action){
