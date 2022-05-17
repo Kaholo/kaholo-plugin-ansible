@@ -182,5 +182,4 @@ function createDockerCommand(command, { volumes, environmentVariables }) {
 
 module.exports = {
   execute,
-  createAnsibleCommand,
 };
