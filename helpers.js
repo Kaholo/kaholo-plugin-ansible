@@ -1,80 +1,136 @@
-const child_process = require(`child_process`)
+const _ = require("lodash");
+const { access } = require("fs/promises");
+const fs = require("fs");
 
-function textToArgs(text, argTail, argsArr){
-    if (text){
-        text.split('\n').forEach(function(arg){
-            const fixed = arg.trim();
-            if (fixed){
-                argsArr.push(argTail, arg);
-            }
-        })
-    }
+function prepareRunPlaybookPayload({
+  sshUsername,
+  sshPass,
+  sshKeyPath,
+  playbookPath,
+  inventoryFiles,
+  inventoryIPs: inventoryIps,
+  limit,
+  modules,
+  vars,
+}) {
+  const sshCredentials = {};
+  if (sshUsername.trim()) {
+    sshCredentials.username = sshUsername.trim();
+  }
+  if (sshPass.trim()) {
+    sshCredentials.password = sshPass.trim();
+  }
+  if (sshKeyPath.trim()) {
+    sshCredentials.keyPath = sshKeyPath.trim();
+  }
+
+  return {
+    playbookPath: playbookPath.trim(),
+    sshCredentials,
+    inventoryFiles,
+    inventoryIps,
+    limit,
+    modules,
+    vars: parseVarsParam(vars),
+  };
 }
 
-function parseVars(varsParam){
-    if (varsParam){
-        if (typeof varsParam === "string"){
-            let vars = {};
-            // if the variables paramater was passed as string, suppose format is key=value pairs and parse it
-            varsParam.split(`\n`).forEach(function(varLine) {
-                const [key,...values] = varLine.split(`=`);
-                if (!values){
-                    throw "variables were passed in a bad format";
-                }
-                vars[key] = values.join('=');
-            });
-            return vars;
-        }
-        else if (typeof varsParam === "object"){    
-            return varsParam;
-        }
-        else {
-            throw "variables wasn't passed as string or object";
-        }
-    }
+function parseVarsParam(varsParam) {
+  if (_.isNil(varsParam)) {
     return {};
+  }
+
+  if (_.isPlainObject(varsParam)) {
+    return varsParam;
+  }
+
+  if (_.isArray(varsParam)) {
+    return _.fromPairs(varsParam.map(
+      (singleVar) => {
+        const [key, ...valueSegments] = singleVar.split("=");
+        return [key, valueSegments.join("=")];
+      },
+    ));
+  }
+
+  throw new Error(`Unsupported format of Vars parameter! Vars: ${JSON.stringify(varsParam)}`);
 }
 
-function joinIPsWithComma(text, argsArr) {
-    if(text) {
-        let res = '-i ';
-        text.split('\n').forEach(function(arg){
-            const fixed = arg.trim();
-            if(fixed) {
-                res += `${fixed}, `; 
-            }
-        })
-        argsArr.push(res);
-    }
+/**
+ * Add a named argument before every
+ * element in the passed list
+ */
+function prependNamedArguments(rawArguments, namedArgument) {
+  return rawArguments.map((arg) => [namedArgument, arg]).flat();
 }
 
-async function runCLICommand(command, args){
-	return new Promise((resolve,reject) => {
-		const spawn = child_process.spawn(command, args);
-        var stdout = "", stderr = "";
-        spawn.stdout.on('data', (data) => {
-            stdout += data;
-        });
-        
-        spawn.stderr.on('data', (data) => {
-            stderr += data;
-        });
-        
-        spawn.on('error', (err) => {
-            return reject(err);
-        });
+function extractMountPointsFromVolumeConfigs(volumeConfigs) {
+  return volumeConfigs
+    .map((volumeConfig) => volumeConfig.mountPoint)
+    .map((modulePath) => `$${modulePath}`);
+}
 
-        spawn.on('close', (code) => {
-            if(code === 0)
-				return resolve((stderr ? stderr + "\n" : "") + stdout);
-			reject({code, stdout, stderr});
-        });
-	})
+function mergeVolumeConfigsEnvironmentVariables(volumeConfigs) {
+  return volumeConfigs.reduce((accumulatedVariables, currentVolumeConfig) => ({
+    ...accumulatedVariables,
+    ...currentVolumeConfig.environmentVariables,
+  }), {});
+}
+
+function createDockerVolumeConfig(path) {
+  const pathEnvironmentVariable = generateRandomEnvironmentVariableName();
+  const mountPointEnvironmentVariable = generateRandomEnvironmentVariableName();
+  return {
+    path: pathEnvironmentVariable,
+    mountPoint: mountPointEnvironmentVariable,
+    environmentVariables: {
+      [pathEnvironmentVariable]: path,
+      [mountPointEnvironmentVariable]: generateRandomTemporaryPath(),
+    },
+  };
+}
+
+function generateRandomEnvironmentVariableName() {
+  return `KAHOLO_ANSIBLE_PLUGIN_ENV_${generateRandomString()}`;
+}
+
+function generateRandomTemporaryPath() {
+  return `/tmp/kaholo_ansible_plugin_tmp_${generateRandomString()}`;
+}
+
+function generateRandomString() {
+  return Math.random().toString(36).slice(2);
+}
+
+async function validatePaths(paths) {
+  const pathsArray = _.isArray(paths) ? paths : [paths];
+
+  const pathPromises = pathsArray.map(pathExists);
+  const pathResults = await Promise.all(pathPromises);
+
+  const nonexistentPaths = pathsArray.filter((path, index) => !pathResults[index]);
+
+  if (nonexistentPaths.length === 1) {
+    throw new Error(`Path ${nonexistentPaths[0]} does not exist!`);
+  } else if (nonexistentPaths.length > 1) {
+    throw new Error(`Paths ${nonexistentPaths.join(", ")} do not exist!`);
+  }
+}
+
+async function pathExists(path) {
+  try {
+    await access(path, fs.constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 module.exports = {
-    textToArgs,
-    runCLICommand,
-    parseVars,
-    joinIPsWithComma
-}
+  validatePaths,
+  prependNamedArguments,
+  prepareRunPlaybookPayload,
+  createDockerVolumeConfig,
+  extractMountPointsFromVolumeConfigs,
+  mergeVolumeConfigsEnvironmentVariables,
+};
