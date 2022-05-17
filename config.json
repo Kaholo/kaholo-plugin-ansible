@@ -7,7 +7,7 @@
   "execProgram": "node",
   "imgUrl": "icon.png",
   "main": "app.js",
-  "version": "1.1.9",
+  "version": "1.2.0",
   "category": ["CONFIGURATION MGMT", "CI/CD"],
   "methods": [
     {
