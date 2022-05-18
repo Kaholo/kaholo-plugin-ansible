@@ -16,7 +16,7 @@ async function execute({
   command,
 }) {
   const {
-    volumes,
+    volumeConfigs,
     environmentVariables,
     ansibleConfig,
   } = await parseAnsibleConfig(unparsedAnsibleConfig);
@@ -25,7 +25,7 @@ async function execute({
   const sanitizedAnsibleCommand = sanitizeCommand(ansibleCommand);
   const dockerCommand = createDockerCommand(sanitizedAnsibleCommand, {
     environmentVariables: Object.keys(environmentVariables),
-    volumes,
+    volumeConfigs,
   });
 
   let result;
@@ -42,57 +42,63 @@ async function execute({
 
 async function parseAnsibleConfig(rawAnsibleConfig) {
   let environmentVariables = {};
-  const volumes = [];
+  const volumeConfigs = [];
   const ansibleConfig = rawAnsibleConfig;
 
   if (rawAnsibleConfig.sshCredentials.keyPath) {
     await validatePaths(rawAnsibleConfig.sshCredentials.keyPath);
 
-    const keyVolume = createDockerVolumeConfig(ansibleConfig.sshCredentials.keyPath);
+    const keyVolumeConfig = createDockerVolumeConfig(ansibleConfig.sshCredentials.keyPath);
 
-    ansibleConfig.sshCredentials.keyPath = `$${keyVolume.mountPoint}`;
-    environmentVariables = Object.assign(environmentVariables, keyVolume.environmentVariables);
-    volumes.push(keyVolume);
+    ansibleConfig.sshCredentials.keyPath = `$${keyVolumeConfig.mountPoint}`;
+    environmentVariables = Object.assign(
+      environmentVariables,
+      keyVolumeConfig.environmentVariables,
+    );
+    volumeConfigs.push(keyVolumeConfig);
   }
 
   if (ansibleConfig.playbookPath) {
     await validatePaths(ansibleConfig.playbookPath);
 
-    const playbookVolume = createDockerVolumeConfig(ansibleConfig.playbookPath);
+    const playbookVolumeConfig = createDockerVolumeConfig(ansibleConfig.playbookPath);
 
-    ansibleConfig.playbookPath = `$${playbookVolume.mountPoint}`;
-    environmentVariables = Object.assign(environmentVariables, playbookVolume.environmentVariables);
-    volumes.push(playbookVolume);
+    ansibleConfig.playbookPath = `$${playbookVolumeConfig.mountPoint}`;
+    environmentVariables = Object.assign(
+      environmentVariables,
+      playbookVolumeConfig.environmentVariables,
+    );
+    volumeConfigs.push(playbookVolumeConfig);
   }
 
   if (ansibleConfig.modules) {
     await validatePaths(ansibleConfig.modules);
 
-    const moduleVolumes = ansibleConfig.modules.map(createDockerVolumeConfig);
+    const moduleVolumeConfigs = ansibleConfig.modules.map(createDockerVolumeConfig);
 
-    ansibleConfig.modules = extractMountPointsFromVolumeConfigs(moduleVolumes);
+    ansibleConfig.modules = extractMountPointsFromVolumeConfigs(moduleVolumeConfigs);
     environmentVariables = Object.assign(
       environmentVariables,
-      mergeVolumeConfigsEnvironmentVariables(moduleVolumes),
+      mergeVolumeConfigsEnvironmentVariables(moduleVolumeConfigs),
     );
-    volumes.push(...moduleVolumes);
+    volumeConfigs.push(...moduleVolumeConfigs);
   }
 
   if (ansibleConfig.inventoryFiles) {
     await validatePaths(ansibleConfig.inventoryFiles);
 
-    const inventoryVolumes = ansibleConfig.inventoryFiles.map(createDockerVolumeConfig);
+    const inventoryVolumeConfigs = ansibleConfig.inventoryFiles.map(createDockerVolumeConfig);
 
-    ansibleConfig.inventoryFiles = extractMountPointsFromVolumeConfigs(inventoryVolumes);
+    ansibleConfig.inventoryFiles = extractMountPointsFromVolumeConfigs(inventoryVolumeConfigs);
     environmentVariables = Object.assign(
       environmentVariables,
-      mergeVolumeConfigsEnvironmentVariables(inventoryVolumes),
+      mergeVolumeConfigsEnvironmentVariables(inventoryVolumeConfigs),
     );
-    volumes.push(...inventoryVolumes);
+    volumeConfigs.push(...inventoryVolumeConfigs);
   }
 
   return {
-    volumes,
+    volumeConfigs,
     environmentVariables,
     ansibleConfig,
   };
@@ -161,12 +167,12 @@ function sanitizeCommand(command) {
   return `$(echo "${command}")`;
 }
 
-function createDockerCommand(command, { volumes, environmentVariables }) {
+function createDockerCommand(command, { volumeConfigs, environmentVariables }) {
   let volumesString = "";
   let environmentVariablesString = "";
 
-  if (volumes) {
-    volumesString = volumes.map(({ path, mountPoint }) => `-v $${path}:$${mountPoint}`).join(" ");
+  if (volumeConfigs) {
+    volumesString = volumeConfigs.map(({ path, mountPoint }) => `-v $${path}:$${mountPoint}`).join(" ");
   }
   if (environmentVariables.length > 0) {
     environmentVariablesString = environmentVariables.map((environmentVariable) => `-e ${environmentVariable}`).join(" ");
