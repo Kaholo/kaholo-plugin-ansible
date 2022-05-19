@@ -14,13 +14,13 @@ function prepareRunPlaybookPayload({
   vars,
 }) {
   const sshCredentials = {};
-  if (sshUsername.trim()) {
+  if (sshUsername?.trim()) {
     sshCredentials.username = sshUsername.trim();
   }
-  if (sshPass.trim()) {
+  if (sshPass?.trim()) {
     sshCredentials.password = sshPass.trim();
   }
-  if (sshKeyPath.trim()) {
+  if (sshKeyPath?.trim()) {
     sshCredentials.keyPath = sshKeyPath.trim();
   }
 
@@ -75,6 +75,18 @@ function mergeVolumeConfigsEnvironmentVariables(volumeConfigs) {
     ...accumulatedVariables,
     ...currentVolumeConfig.environmentVariables,
   }), {});
+}
+
+function createEnvironmentVariablesString(environmentVariables = []) {
+  return environmentVariables.map(
+    (environmentVariable) => `-e ${environmentVariable}`,
+  ).join(" ");
+}
+
+function createDockerVolumesString(volumeConfigs = []) {
+  return volumeConfigs.map(
+    ({ path, mountPoint }) => `-v $${path}:$${mountPoint}`,
+  ).join(" ");
 }
 
 function createDockerVolumeConfig(path) {
@@ -133,4 +145,6 @@ module.exports = {
   createDockerVolumeConfig,
   extractMountPointsFromVolumeConfigs,
   mergeVolumeConfigsEnvironmentVariables,
+  createDockerVolumesString,
+  createEnvironmentVariablesString,
 };

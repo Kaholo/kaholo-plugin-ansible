@@ -1,11 +1,14 @@
 const { promisify } = require("util");
 const childProcess = require("child_process");
+const _ = require("lodash");
 const {
   prependNamedArguments,
   createDockerVolumeConfig,
   extractMountPointsFromVolumeConfigs,
   mergeVolumeConfigsEnvironmentVariables,
   validatePaths,
+  createDockerVolumesString,
+  createEnvironmentVariablesString,
 } = require("./helpers");
 const { ANSIBLE_DOCKER_IMAGE } = require("./consts.json");
 
@@ -34,7 +37,7 @@ async function execute({
       env: environmentVariables,
     });
   } catch (error) {
-    throw new Error(error.stderr ?? error.stdout ?? error.message ?? error);
+    throw new Error(error.stdout || error.stderr || error.message || error);
   }
 
   return result;
@@ -111,72 +114,73 @@ function createAnsibleCommand(baseCommand, {
   inventoryIps,
   limit,
   modules,
-  vars,
+  vars = {},
 }) {
-  const additionalArguments = [playbookPath];
+  const postArguments = [playbookPath];
+  const preArguments = [];
 
   const ansibleCommandVariables = vars;
 
-  if (inventoryFiles.length > 0) {
-    additionalArguments.push(...prependNamedArguments(inventoryFiles, "-i"));
+  if (inventoryFiles?.length > 0) {
+    postArguments.push(...prependNamedArguments(inventoryFiles, "-i"));
   }
-  if (limit.length > 0) {
-    additionalArguments.push(...prependNamedArguments(limit, "-l"));
+  if (limit?.length > 0) {
+    postArguments.push(...prependNamedArguments(limit, "-l"));
   }
-  if (modules.length > 0) {
-    additionalArguments.push(...prependNamedArguments(modules, "-M"));
+  if (modules?.length > 0) {
+    postArguments.push(...prependNamedArguments(modules, "-M"));
   }
 
-  if (inventoryIps.length > 0) {
-    additionalArguments.push("-i", inventoryIps.join(","));
+  if (inventoryIps?.length > 0) {
+    postArguments.push("-i", inventoryIps.join(","));
   }
 
   if (sshCredentials) {
     const { username, password, keyPath } = sshCredentials;
 
     if (username) {
-      ansibleCommandVariables.ansible_user = username;
+      postArguments.push("-u", username);
     }
     if (password) {
       ansibleCommandVariables.ansible_ssh_pass = password;
     }
     if (keyPath) {
-      ansibleCommandVariables.ansible_ssh_private_key_file = keyPath;
+      postArguments.push("--private-key", keyPath);
     }
     if (password || keyPath) {
       ansibleCommandVariables.ansible_connection = "ssh";
+
+      // Host authenticity checking requires user
+      // to type "yes" in shell and in a Docker container
+      // it fails for some reason, ANSIBLE_HOST_KEY_CHECKING
+      // variable is needed otherwise the ansible-playbook
+      // fails with "Host key verification failed." error
+      preArguments.push("ANSIBLE_HOST_KEY_CHECKING=False");
     }
   }
 
+  if (!_.isEmpty(ansibleCommandVariables)) {
+    postArguments.push("-e", JSON.stringify(JSON.stringify(ansibleCommandVariables)));
+  }
+
   let finalCommand = baseCommand;
-  if (additionalArguments.length > 0) {
-    finalCommand += ` ${additionalArguments.join(" ")}`;
+  if (preArguments.length > 0) {
+    finalCommand = `${preArguments.join(" ")} ${finalCommand}`;
+  }
+  if (postArguments.length > 0) {
+    finalCommand = `${finalCommand} ${postArguments.join(" ")}`;
   }
 
   return finalCommand;
 }
 
 function sanitizeCommand(command) {
-  // This is the safest way to escape the user provided command.
-  // By putting the command in double quotes, we can be sure that
-  // every character within the command is escaped, including the
-  // ones that could be used for shell injection (e.g. ';', '|', etc.).
-  // The escaped string needs then to be echoed back to the docker command
-  // in order to be properly executed - simply passing the command in double quotes
-  // would result in docker confusing the quotes as a part of the command.
-  return `$(echo "${command}")`;
+  return `sh -c ${JSON.stringify(command)}`;
 }
 
 function createDockerCommand(command, { volumeConfigs, environmentVariables }) {
-  let volumesString = "";
-  let environmentVariablesString = "";
-
-  if (volumeConfigs) {
-    volumesString = volumeConfigs.map(({ path, mountPoint }) => `-v $${path}:$${mountPoint}`).join(" ");
-  }
-  if (environmentVariables.length > 0) {
-    environmentVariablesString = environmentVariables.map((environmentVariable) => `-e ${environmentVariable}`).join(" ");
-  }
+  const volumesString = createDockerVolumesString(volumeConfigs);
+  const environmentVariablesString = createEnvironmentVariablesString(environmentVariables);
 
   return (
     `docker run --rm \

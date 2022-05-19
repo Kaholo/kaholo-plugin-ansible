@@ -4,6 +4,7 @@ const { prepareRunPlaybookPayload } = require("./helpers");
 
 function runPlaybook(params) {
   const payload = prepareRunPlaybookPayload(params);
+
   return execute({
     command: "ansible-playbook",
     config: payload,
