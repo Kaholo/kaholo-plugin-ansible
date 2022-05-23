@@ -2,14 +2,11 @@ const { promisify } = require("util");
 const childProcess = require("child_process");
 const _ = require("lodash");
 const {
-  validatePaths,
+  validatePaths, prependNamedArguments,
 } = require("./helpers");
 const { ANSIBLE_DOCKER_IMAGE } = require("./consts.json");
 const {
   createDockerVolumeConfig,
-  extractMountPointsFromVolumeConfigs,
-  mergeVolumeConfigsEnvironmentVariables,
-  prependNamedArguments,
   createDockerVolumesString,
   createEnvironmentVariablesString,
 } = require("./docker-helpers");
@@ -20,17 +17,18 @@ async function execute({
   params: ansibleParams,
   command,
 }) {
-  const {
-    volumeConfigs,
-    environmentVariables,
-    ansibleConfig,
-  } = await parseAnsibleParams(ansibleParams);
+  const volumeConfigsMap = await createDockerVolumeConfigsMap(ansibleParams);
+  const environmentVariables = [...volumeConfigsMap.values()].reduce((acc, curr) => ({
+    ...acc,
+    ...curr.environmentVariables,
+  }), {});
+  const ansibleCommandParams = createAnsibleCommandParams(ansibleParams, volumeConfigsMap);
 
-  const ansibleCommand = createAnsibleCommand(command, ansibleConfig);
+  const ansibleCommand = createAnsibleCommand(command, ansibleCommandParams);
   const sanitizedAnsibleCommand = sanitizeCommand(ansibleCommand);
   const dockerCommand = createDockerCommand(sanitizedAnsibleCommand, {
     environmentVariables: Object.keys(environmentVariables),
-    volumeConfigs,
+    volumeConfigsArray: [...volumeConfigsMap.values()],
   });
 
   let result;
@@ -45,68 +43,97 @@ async function execute({
   return result;
 }
 
-async function parseAnsibleParams(ansibleParams) {
-  let environmentVariables = {};
-  const volumeConfigs = [];
-  const ansibleConfig = ansibleParams;
+async function createDockerVolumeConfigsMap({
+  sshCredentials,
+  playbookPath,
+  modules,
+  inventoryFiles,
+}) {
+  const volumeConfigsMap = new Map();
 
-  if (ansibleParams.sshCredentials.keyPath) {
-    await validatePaths(ansibleParams.sshCredentials.keyPath);
+  if (sshCredentials.keyPath) {
+    await validatePaths(sshCredentials.keyPath);
 
-    const keyVolumeConfig = createDockerVolumeConfig(ansibleConfig.sshCredentials.keyPath);
+    const keyVolumeConfig = createDockerVolumeConfig(sshCredentials.keyPath);
 
-    ansibleConfig.sshCredentials.keyPath = `$${keyVolumeConfig.mountPoint}`;
-    environmentVariables = Object.assign(
-      environmentVariables,
-      keyVolumeConfig.environmentVariables,
-    );
-    volumeConfigs.push(keyVolumeConfig);
+    volumeConfigsMap.set("sshCredentials.keyPath", keyVolumeConfig);
   }
 
-  if (ansibleConfig.playbookPath) {
-    await validatePaths(ansibleConfig.playbookPath);
+  if (playbookPath) {
+    await validatePaths(playbookPath);
 
-    const playbookVolumeConfig = createDockerVolumeConfig(ansibleConfig.playbookPath);
+    const playbookVolumeConfig = createDockerVolumeConfig(playbookPath);
 
-    ansibleConfig.playbookPath = `$${playbookVolumeConfig.mountPoint}`;
-    environmentVariables = Object.assign(
-      environmentVariables,
-      playbookVolumeConfig.environmentVariables,
-    );
-    volumeConfigs.push(playbookVolumeConfig);
+    volumeConfigsMap.set("playbookPath", playbookVolumeConfig);
   }
 
-  if (ansibleConfig.modules) {
-    await validatePaths(ansibleConfig.modules);
+  if (modules) {
+    await validatePaths(modules);
 
-    const moduleVolumeConfigs = ansibleConfig.modules.map(createDockerVolumeConfig);
+    const moduleVolumeConfigs = modules.map(createDockerVolumeConfig);
 
-    ansibleConfig.modules = extractMountPointsFromVolumeConfigs(moduleVolumeConfigs);
-    environmentVariables = Object.assign(
-      environmentVariables,
-      mergeVolumeConfigsEnvironmentVariables(moduleVolumeConfigs),
-    );
-    volumeConfigs.push(...moduleVolumeConfigs);
+    volumeConfigsMap.set("modules", moduleVolumeConfigs);
   }
 
-  if (ansibleConfig.inventoryFiles) {
-    await validatePaths(ansibleConfig.inventoryFiles);
+  if (inventoryFiles) {
+    await validatePaths(inventoryFiles);
 
-    const inventoryVolumeConfigs = ansibleConfig.inventoryFiles.map(createDockerVolumeConfig);
+    const inventoryVolumeConfigs = inventoryFiles.map(createDockerVolumeConfig);
 
-    ansibleConfig.inventoryFiles = extractMountPointsFromVolumeConfigs(inventoryVolumeConfigs);
-    environmentVariables = Object.assign(
-      environmentVariables,
-      mergeVolumeConfigsEnvironmentVariables(inventoryVolumeConfigs),
-    );
-    volumeConfigs.push(...inventoryVolumeConfigs);
+    volumeConfigsMap.set("inventoryFiles", inventoryVolumeConfigs);
   }
 
-  return {
-    volumeConfigs,
-    environmentVariables,
-    ansibleConfig,
+  return volumeConfigsMap;
+}
+
+function createAnsibleCommandParams(
+  {
+    sshCredentials,
+    inventoryIps,
+    limit,
+    vars,
+  },
+  volumeConfigs,
+) {
+  const ansibleCommandParams = {
+    sshCredentials: {
+      username: sshCredentials.username,
+      password: sshCredentials.password,
+    },
+    inventoryIps,
+    limit,
+    vars,
   };
+
+  if (volumeConfigs.has("sshCredentials.keyPath")) {
+    const keyPathMountPoint = volumeConfigs
+      .get("sshCredentials.keyPath")
+      .mountPoint;
+
+    ansibleCommandParams.sshCredentials.keyPath = `$${keyPathMountPoint}`;
+  }
+
+  if (volumeConfigs.has("playbookPath")) {
+    const playbookPathMountPoint = volumeConfigs
+      .get("playbookPath")
+      .mountPoint;
+
+    ansibleCommandParams.playbookPath = `$${playbookPathMountPoint}`;
+  }
+
+  if (volumeConfigs.has("modules")) {
+    ansibleCommandParams.modules = volumeConfigs
+      .get("modules")
+      .map((volumeConfig) => `$${volumeConfig.mountPoint}`);
+  }
+
+  if (volumeConfigs.has("inventoryFiles")) {
+    ansibleCommandParams.inventoryFiles = volumeConfigs
+      .get("inventoryFiles")
+      .map((volumeConfig) => `$${volumeConfig.mountPoint}`);
+  }
+
+  return ansibleCommandParams;
 }
 
 function createAnsibleCommand(baseCommand, {
@@ -180,8 +207,8 @@ function sanitizeCommand(command) {
   return `sh -c ${JSON.stringify(command)}`;
 }
 
-function createDockerCommand(command, { volumeConfigs, environmentVariables }) {
-  const volumesString = createDockerVolumesString(volumeConfigs);
+function createDockerCommand(command, { volumeConfigsArray, environmentVariables }) {
+  const volumesString = createDockerVolumesString(volumeConfigsArray);
   const environmentVariablesString = createEnvironmentVariablesString(environmentVariables);
 
   return (

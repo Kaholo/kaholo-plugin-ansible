@@ -2,6 +2,14 @@ const _ = require("lodash");
 const { access } = require("fs/promises");
 const fs = require("fs");
 
+/**
+ * Add a named argument before every
+ * element in the passed list
+ */
+function prependNamedArguments(rawArguments, namedArgument) {
+  return rawArguments.map((arg) => [namedArgument, arg]).flat();
+}
+
 function generateRandomString() {
   return Math.random().toString(36).slice(2);
 }
@@ -33,4 +41,5 @@ async function pathExists(path) {
 module.exports = {
   validatePaths,
   generateRandomString,
+  prependNamedArguments,
 };
