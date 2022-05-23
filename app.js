@@ -1,13 +1,13 @@
 const kaholoPluginLibrary = require("kaholo-plugin-library");
 const { execute } = require("./ansible-cli");
-const { prepareRunPlaybookPayload } = require("./helpers");
+const { prepareRunPlaybookAnsibleParams } = require("./payload-functions");
 
 function runPlaybook(params) {
-  const payload = prepareRunPlaybookPayload(params);
+  const ansibleParams = prepareRunPlaybookAnsibleParams(params);
 
   return execute({
     command: "ansible-playbook",
-    config: payload,
+    params: ansibleParams,
   });
 }
 

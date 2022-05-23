@@ -32,7 +32,7 @@
         {
           "name": "sshPass",
           "viewName": "SSH Password",
-          "description": "Password for the provided username",
+          "description": "Password for the provided username.",
           "type": "vault"
         },
         {

@@ -2,27 +2,29 @@ const { promisify } = require("util");
 const childProcess = require("child_process");
 const _ = require("lodash");
 const {
-  prependNamedArguments,
+  validatePaths,
+} = require("./helpers");
+const { ANSIBLE_DOCKER_IMAGE } = require("./consts.json");
+const {
   createDockerVolumeConfig,
   extractMountPointsFromVolumeConfigs,
   mergeVolumeConfigsEnvironmentVariables,
-  validatePaths,
+  prependNamedArguments,
   createDockerVolumesString,
   createEnvironmentVariablesString,
-} = require("./helpers");
-const { ANSIBLE_DOCKER_IMAGE } = require("./consts.json");
+} = require("./docker-helpers");
 
 const exec = promisify(childProcess.exec);
 
 async function execute({
-  config: unparsedAnsibleConfig,
+  params: ansibleParams,
   command,
 }) {
   const {
     volumeConfigs,
     environmentVariables,
     ansibleConfig,
-  } = await parseAnsibleConfig(unparsedAnsibleConfig);
+  } = await parseAnsibleParams(ansibleParams);
 
   const ansibleCommand = createAnsibleCommand(command, ansibleConfig);
   const sanitizedAnsibleCommand = sanitizeCommand(ansibleCommand);
@@ -43,13 +45,13 @@ async function execute({
   return result;
 }
 
-async function parseAnsibleConfig(rawAnsibleConfig) {
+async function parseAnsibleParams(ansibleParams) {
   let environmentVariables = {};
   const volumeConfigs = [];
-  const ansibleConfig = rawAnsibleConfig;
+  const ansibleConfig = ansibleParams;
 
-  if (rawAnsibleConfig.sshCredentials.keyPath) {
-    await validatePaths(rawAnsibleConfig.sshCredentials.keyPath);
+  if (ansibleParams.sshCredentials.keyPath) {
+    await validatePaths(ansibleParams.sshCredentials.keyPath);
 
     const keyVolumeConfig = createDockerVolumeConfig(ansibleConfig.sshCredentials.keyPath);
 
