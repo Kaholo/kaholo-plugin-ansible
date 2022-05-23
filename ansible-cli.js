@@ -18,7 +18,8 @@ async function execute({
   command,
 }) {
   const volumeConfigsMap = await createDockerVolumeConfigsMap(ansibleParams);
-  const environmentVariables = [...volumeConfigsMap.values()].reduce((acc, curr) => ({
+  const volumeConfigsArray = [...volumeConfigsMap.values()].flat();
+  const environmentVariables = volumeConfigsArray.reduce((acc, curr) => ({
     ...acc,
     ...curr.environmentVariables,
   }), {});
@@ -28,7 +29,7 @@ async function execute({
   const sanitizedAnsibleCommand = sanitizeCommand(ansibleCommand);
   const dockerCommand = createDockerCommand(sanitizedAnsibleCommand, {
     environmentVariables: Object.keys(environmentVariables),
-    volumeConfigsArray: [...volumeConfigsMap.values()],
+    volumeConfigsArray,
   });
 
   let result;
