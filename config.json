@@ -7,7 +7,7 @@
   "execProgram": "node",
   "imgUrl": "icon.png",
   "main": "app.js",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "category": ["CONFIGURATION MGMT", "CI/CD"],
   "methods": [
     {
@@ -23,65 +23,24 @@
           "required": true
         },
         {
-          "name": "sshUsername",
-          "viewName": "SSH Username",
-          "description": "Username under which the SSH connection will be obtained.",
-          "placeholder": "ubuntu",
-          "type": "string"
-        },
-        {
-          "name": "sshPass",
-          "viewName": "SSH Password",
-          "description": "Password for the provided username.",
+          "name": "vaultPasswordFile",
+          "viewName": "Ansible Vault Password File",
+          "description": "Vaulted content of Ansible password file. Contents are placed in a temporary file which is used by Ansible with --vault-password-file argument.",
           "type": "vault"
         },
         {
-          "name": "sshKeyPath",
-          "viewName": "SSH Key Path",
-          "description": "Path to the SSH Private Key.",
-          "placeholder": "~/.ssh/id_rsa.pem",
-          "type": "string"
+          "name": "sshPassword",
+          "viewName": "SSH Password",
+          "description": "Password to authenticate SSH connections.",
+          "type": "vault"
         },
         {
-          "name": "inventoryFiles",
-          "viewName": "Inventory Files",
-          "description": "Add file paths to the inventory files. Use new lines for multiple.",
-          "placeholder": "/etc/ansible/hosts\n/etc/ansible/hosts_v2",
+          "name": "additionalArguments",
+          "viewName": "Additional Command Line Arguments",
+          "description": "Additional command arguments appended at the end of the generated command, one argument per line.",
           "type": "text",
-          "parserType": "array"
-        },
-        {
-          "name": "inventoryIPs",
-          "viewName": "Inventory IPs/Hosts",
-          "placeholder": "10.0.0.1\nexample.com",
-          "description": "Each new line can be an IP or Hostname. Requires 'hosts: all' in your playbook.",
-          "type": "text",
-          "parserType": "array"
-        },
-        {
-          "name": "limit",
-          "viewName": "Limit",
-          "description": "Each new line is further limitation of selected hosts to an additional pattern.",
-          "learnUrl": "https://docs.ansible.com/ansible/latest/user_guide/intro_patterns.html#patterns-and-ansible-playbook-flags",
-          "type": "text",
-          "parserType": "array"
-        },
-        {
-          "name": "modules",
-          "viewName": "Modules",
-          "learnUrl": "https://docs.ansible.com/ansible/latest/user_guide/basic_concepts.html#modules",
-          "description": "Path(s) to module library",
-          "type": "text",
-          "parserType": "array"
-        },
-        {
-          "name": "vars",
-          "viewName": "Variables",
-          "description": "Set additional variables as key=value, for more than one separate them with new line. NOTE: The variables set here will override all other variables in your playbooks/inventories etc.",
-          "learnUrl": "https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html",
-          "placeholder": "foo=bar\nbar=foo",
-          "type": "text",
-          "parserType": "array"
+          "parserType": "array",
+          "placeholder": "-vv\n--syntax-check"
         }
       ]
     }

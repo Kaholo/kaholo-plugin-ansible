@@ -2,14 +2,6 @@ const _ = require("lodash");
 const { access } = require("fs/promises");
 const fs = require("fs");
 
-/**
- * Add a named argument before every
- * element in the passed list
- */
-function prependNamedArguments(rawArguments, namedArgument) {
-  return rawArguments.map((arg) => [namedArgument, arg]).flat();
-}
-
 function generateRandomString() {
   return Math.random().toString(36).slice(2);
 }
@@ -38,8 +30,26 @@ async function pathExists(path) {
   }
 }
 
+function generateRandomEnvironmentVariableName() {
+  return `KAHOLO_ANSIBLE_PLUGIN_ENV_${generateRandomString()}`;
+}
+
+function generateRandomTemporaryPath() {
+  return `/tmp/kaholo_ansible_plugin_tmp_${generateRandomString()}`;
+}
+
+function logToActivityLog(message) {
+  // TODO: Change console.error to console.info
+  // Right now (Kaholo v4.1.2.1) console.info
+  // does not print messages to Activity Log
+  // Jira ticket: https://kaholo.atlassian.net/browse/KAH-3636
+  console.error(message);
+}
+
 module.exports = {
   validatePaths,
   generateRandomString,
-  prependNamedArguments,
+  generateRandomEnvironmentVariableName,
+  generateRandomTemporaryPath,
+  logToActivityLog,
 };
