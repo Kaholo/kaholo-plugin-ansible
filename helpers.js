@@ -40,7 +40,7 @@ function generateRandomTemporaryPath() {
 
 function logToActivityLog(message) {
   // TODO: Change console.error to console.info
-  // Right now (Kaholo v4.1.2.1) console.info
+  // Right now (Kaholo v4.2.3) console.info
   // does not print messages to Activity Log
   // Jira ticket: https://kaholo.atlassian.net/browse/KAH-3636
   console.error(message);

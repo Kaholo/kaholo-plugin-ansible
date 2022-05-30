@@ -1,5 +1,5 @@
 const path = require("path");
-const kaholoPluginLibrary = require("kaholo-plugin-library");
+const kaholoPluginLibrary = require("@kaholo/plugin-library");
 const { execute } = require("./ansible-cli");
 
 async function runPlaybook({

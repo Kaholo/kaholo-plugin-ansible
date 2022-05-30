@@ -23,12 +23,20 @@ async function execute({
     ...curr.environmentVariables,
   }), {});
 
-  const updatedParams = params;
+  const updatedParams = _.cloneDeep(params);
   if (volumeConfigsMap.has("vaultPasswordFile")) {
     updatedParams.vaultPasswordFile = `$${volumeConfigsMap.get("vaultPasswordFile").mountPoint}`;
   }
 
-  const ansibleCommand = createAnsibleCommand(command, updatedParams, additionalArguments);
+  const ansibleCommand = createAnsibleCommand(
+    command,
+    {
+      playbookName: updatedParams.playbookName,
+      sshPassword: updatedParams.sshCredentials.password,
+      vaultPasswordFile: updatedParams.vaultPasswordFile,
+    },
+    additionalArguments,
+  );
   const sanitizedAnsibleCommand = sanitizeCommand(ansibleCommand);
   const dockerCommand = createDockerCommand(sanitizedAnsibleCommand, {
     cwd: `$${volumeConfigsMap.get("playbookDirectory").mountPoint}`,
@@ -60,7 +68,7 @@ function createAnsibleCommand(
   baseCommand,
   {
     playbookName,
-    sshCredentials = {},
+    sshPassword,
     vaultPasswordFile,
   },
   additionalArguments = [],
@@ -69,9 +77,9 @@ function createAnsibleCommand(
   const preArguments = [];
   const ansibleCommandVariables = {};
 
-  if (sshCredentials.password) {
+  if (sshPassword) {
     ansibleCommandVariables.ansible_connection = "ssh";
-    ansibleCommandVariables.ansible_ssh_pass = sshCredentials.password;
+    ansibleCommandVariables.ansible_ssh_pass = sshPassword;
 
     // Host authenticity checking requires user
     // to type "yes" in shell and in a Docker container
@@ -104,25 +112,29 @@ function sanitizeCommand(command) {
   return `sh -c ${JSON.stringify(command)}`;
 }
 
-function createDockerCommand(command, { volumeConfigsArray, environmentVariables, cwd }) {
+function createDockerCommand(command, {
+  volumeConfigsArray,
+  environmentVariables,
+  workingDirectory,
+}) {
   const volumeArguments = createDockerVolumeArguments(volumeConfigsArray);
   const environmentVariableArguments = createEnvironmentVariableArguments(environmentVariables);
-  const cwdArguments = cwd && ["-w", cwd];
+  const workingDirectoryArguments = workingDirectory && ["-w", workingDirectory];
 
-  const dockerCmdArguments = ["docker", "run", "--rm"];
+  const dockerCommandArguments = ["docker", "run", "--rm"];
 
   if (environmentVariableArguments) {
-    dockerCmdArguments.push(...environmentVariableArguments);
+    dockerCommandArguments.push(...environmentVariableArguments);
   }
   if (volumeArguments) {
-    dockerCmdArguments.push(...volumeArguments);
+    dockerCommandArguments.push(...volumeArguments);
   }
-  if (cwdArguments) {
-    dockerCmdArguments.push(...cwdArguments);
+  if (workingDirectoryArguments) {
+    dockerCommandArguments.push(...workingDirectoryArguments);
   }
-  dockerCmdArguments.push(ANSIBLE_DOCKER_IMAGE, command);
+  dockerCommandArguments.push(ANSIBLE_DOCKER_IMAGE, command);
 
-  return dockerCmdArguments.join(" ");
+  return dockerCommandArguments.join(" ");
 }
 
 module.exports = {
