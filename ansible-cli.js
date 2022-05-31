@@ -39,7 +39,7 @@ async function execute({
   );
   const sanitizedAnsibleCommand = sanitizeCommand(ansibleCommand);
   const dockerCommand = createDockerCommand(sanitizedAnsibleCommand, {
-    cwd: `$${volumeConfigsMap.get("playbookDirectory").mountPoint}`,
+    workingDirectory: `$${volumeConfigsMap.get("playbookDirectory").mountPoint}`,
     environmentVariables: Object.keys(environmentVariables),
     volumeConfigsArray,
   });
