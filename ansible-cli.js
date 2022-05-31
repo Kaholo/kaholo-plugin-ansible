@@ -23,18 +23,17 @@ async function execute({
     ...curr.environmentVariables,
   }), {});
 
-  const updatedParams = _.cloneDeep(params);
+  const ansibleCommandParams = {
+    playbookName: params.playbookName,
+    sshPassword: params.sshCredentials.password,
+  };
   if (volumeConfigsMap.has("vaultPasswordFile")) {
-    updatedParams.vaultPasswordFile = `$${volumeConfigsMap.get("vaultPasswordFile").mountPoint}`;
+    ansibleCommandParams.vaultPasswordFile = `$${volumeConfigsMap.get("vaultPasswordFile").mountPoint}`;
   }
 
   const ansibleCommand = createAnsibleCommand(
     command,
-    {
-      playbookName: updatedParams.playbookName,
-      sshPassword: updatedParams.sshCredentials.password,
-      vaultPasswordFile: updatedParams.vaultPasswordFile,
-    },
+    ansibleCommandParams,
     additionalArguments,
   );
   const sanitizedAnsibleCommand = sanitizeCommand(ansibleCommand);
