@@ -31,11 +31,7 @@ async function execute({
     ansibleCommandParams.vaultPasswordFile = `$${volumeConfigsMap.get("vaultPasswordFile").mountPoint}`;
   }
 
-  const ansibleCommand = createAnsibleCommand(
-    command,
-    ansibleCommandParams,
-    additionalArguments,
-  );
+  const ansibleCommand = createAnsibleCommand(command, ansibleCommandParams, additionalArguments);
   const sanitizedAnsibleCommand = sanitizeCommand(ansibleCommand);
   const dockerCommand = createDockerCommand(sanitizedAnsibleCommand, {
     workingDirectory: `$${volumeConfigsMap.get("playbookDirectory").mountPoint}`,
