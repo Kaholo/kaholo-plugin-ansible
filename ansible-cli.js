@@ -1,197 +1,96 @@
 const { promisify } = require("util");
 const childProcess = require("child_process");
 const _ = require("lodash");
-const {
-  validatePaths, prependNamedArguments,
-} = require("./helpers");
 const { ANSIBLE_DOCKER_IMAGE } = require("./consts.json");
 const {
   createDockerVolumeConfig,
-  createDockerVolumesString,
-  createEnvironmentVariablesString,
+  createDockerVolumeArguments,
+  createEnvironmentVariableArguments,
 } = require("./docker-helpers");
+const { logToActivityLog } = require("./helpers");
 
 const exec = promisify(childProcess.exec);
 
 async function execute({
-  params: ansibleParams,
+  params,
+  additionalArguments,
   command,
 }) {
-  const volumeConfigsMap = await createDockerVolumeConfigsMap(ansibleParams);
+  const volumeConfigsMap = createVolumeConfigsMap(params);
   const volumeConfigsArray = [...volumeConfigsMap.values()].flat();
   const environmentVariables = volumeConfigsArray.reduce((acc, curr) => ({
     ...acc,
     ...curr.environmentVariables,
   }), {});
-  const ansibleCommandParams = createAnsibleCommandParams(ansibleParams, volumeConfigsMap);
 
-  const ansibleCommand = createAnsibleCommand(command, ansibleCommandParams);
+  const ansibleCommandParams = {
+    playbookName: params.playbookName,
+    sshPassword: params.sshCredentials.password,
+  };
+  if (volumeConfigsMap.has("vaultPasswordFile")) {
+    ansibleCommandParams.vaultPasswordFile = `$${volumeConfigsMap.get("vaultPasswordFile").mountPoint}`;
+  }
+
+  const ansibleCommand = createAnsibleCommand(command, ansibleCommandParams, additionalArguments);
   const sanitizedAnsibleCommand = sanitizeCommand(ansibleCommand);
   const dockerCommand = createDockerCommand(sanitizedAnsibleCommand, {
+    workingDirectory: `$${volumeConfigsMap.get("playbookDirectory").mountPoint}`,
     environmentVariables: Object.keys(environmentVariables),
     volumeConfigsArray,
   });
+  logToActivityLog(`Generated Docker command: ${dockerCommand}`);
 
-  let result;
-  try {
-    result = await exec(dockerCommand, {
-      env: environmentVariables,
-    });
-  } catch (error) {
+  return exec(dockerCommand, {
+    env: environmentVariables,
+  }).catch((error) => {
     throw new Error(error.stdout || error.stderr || error.message || error);
-  }
-
-  return result;
+  });
 }
 
-async function createDockerVolumeConfigsMap({
-  sshCredentials,
-  playbookPath,
-  modules,
-  inventoryFiles,
-}) {
-  const volumeConfigsMap = new Map();
+function createVolumeConfigsMap(params) {
+  const volumeConfigsMap = new Map([
+    ["playbookDirectory", createDockerVolumeConfig(params.playbookDirectory)],
+  ]);
 
-  if (sshCredentials.keyPath) {
-    await validatePaths(sshCredentials.keyPath);
-
-    const keyVolumeConfig = createDockerVolumeConfig(sshCredentials.keyPath);
-
-    volumeConfigsMap.set("sshCredentials.keyPath", keyVolumeConfig);
-  }
-
-  if (playbookPath) {
-    await validatePaths(playbookPath);
-
-    const playbookVolumeConfig = createDockerVolumeConfig(playbookPath);
-
-    volumeConfigsMap.set("playbookPath", playbookVolumeConfig);
-  }
-
-  if (modules) {
-    await validatePaths(modules);
-
-    const moduleVolumeConfigs = modules.map(createDockerVolumeConfig);
-
-    volumeConfigsMap.set("modules", moduleVolumeConfigs);
-  }
-
-  if (inventoryFiles) {
-    await validatePaths(inventoryFiles);
-
-    const inventoryVolumeConfigs = inventoryFiles.map(createDockerVolumeConfig);
-
-    volumeConfigsMap.set("inventoryFiles", inventoryVolumeConfigs);
+  if (params.vaultPasswordFile) {
+    volumeConfigsMap.set("vaultPasswordFile", createDockerVolumeConfig(params.vaultPasswordFile));
   }
 
   return volumeConfigsMap;
 }
 
-function createAnsibleCommandParams(
+function createAnsibleCommand(
+  baseCommand,
   {
-    sshCredentials,
-    inventoryIps,
-    limit,
-    vars,
+    playbookName,
+    sshPassword,
+    vaultPasswordFile,
   },
-  volumeConfigs,
+  additionalArguments = [],
 ) {
-  const ansibleCommandParams = {
-    sshCredentials: {
-      username: sshCredentials.username,
-      password: sshCredentials.password,
-    },
-    inventoryIps,
-    limit,
-    vars,
-  };
-
-  if (volumeConfigs.has("sshCredentials.keyPath")) {
-    const keyPathMountPoint = volumeConfigs
-      .get("sshCredentials.keyPath")
-      .mountPoint;
-
-    ansibleCommandParams.sshCredentials.keyPath = `$${keyPathMountPoint}`;
-  }
-
-  if (volumeConfigs.has("playbookPath")) {
-    const playbookPathMountPoint = volumeConfigs
-      .get("playbookPath")
-      .mountPoint;
-
-    ansibleCommandParams.playbookPath = `$${playbookPathMountPoint}`;
-  }
-
-  if (volumeConfigs.has("modules")) {
-    ansibleCommandParams.modules = volumeConfigs
-      .get("modules")
-      .map((volumeConfig) => `$${volumeConfig.mountPoint}`);
-  }
-
-  if (volumeConfigs.has("inventoryFiles")) {
-    ansibleCommandParams.inventoryFiles = volumeConfigs
-      .get("inventoryFiles")
-      .map((volumeConfig) => `$${volumeConfig.mountPoint}`);
-  }
-
-  return ansibleCommandParams;
-}
-
-function createAnsibleCommand(baseCommand, {
-  sshCredentials,
-  playbookPath,
-  inventoryFiles,
-  inventoryIps,
-  limit,
-  modules,
-  vars = {},
-}) {
-  const postArguments = [playbookPath];
+  const postArguments = [playbookName];
   const preArguments = [];
+  const ansibleCommandVariables = {};
 
-  const ansibleCommandVariables = vars;
+  if (sshPassword) {
+    ansibleCommandVariables.ansible_connection = "ssh";
+    ansibleCommandVariables.ansible_ssh_pass = sshPassword;
 
-  if (inventoryFiles?.length > 0) {
-    postArguments.push(...prependNamedArguments(inventoryFiles, "-i"));
+    // Host authenticity checking requires user
+    // to type "yes" in shell and in a Docker container
+    // it fails instantaneously for some reason, ANSIBLE_HOST_KEY_CHECKING
+    // variable is needed otherwise the ansible-playbook
+    // fails with "Host key verification failed." error
+    preArguments.push("ANSIBLE_HOST_KEY_CHECKING=False");
   }
-  if (limit?.length > 0) {
-    postArguments.push(...prependNamedArguments(limit, "-l"));
-  }
-  if (modules?.length > 0) {
-    postArguments.push(...prependNamedArguments(modules, "-M"));
-  }
-
-  if (inventoryIps?.length > 0) {
-    postArguments.push("-i", inventoryIps.join(","));
-  }
-
-  if (sshCredentials) {
-    const { username, password, keyPath } = sshCredentials;
-
-    if (username) {
-      postArguments.push("-u", username);
-    }
-    if (password) {
-      ansibleCommandVariables.ansible_ssh_pass = password;
-    }
-    if (keyPath) {
-      postArguments.push("--private-key", keyPath);
-    }
-    if (password || keyPath) {
-      ansibleCommandVariables.ansible_connection = "ssh";
-
-      // Host authenticity checking requires user
-      // to type "yes" in shell and in a Docker container
-      // it fails for some reason, ANSIBLE_HOST_KEY_CHECKING
-      // variable is needed otherwise the ansible-playbook
-      // fails with "Host key verification failed." error
-      preArguments.push("ANSIBLE_HOST_KEY_CHECKING=False");
-    }
+  if (vaultPasswordFile) {
+    postArguments.push("--vault-password-file", vaultPasswordFile);
   }
 
   if (!_.isEmpty(ansibleCommandVariables)) {
     postArguments.push("-e", JSON.stringify(JSON.stringify(ansibleCommandVariables)));
   }
+  postArguments.push(...additionalArguments);
 
   let finalCommand = baseCommand;
   if (preArguments.length > 0) {
@@ -208,16 +107,29 @@ function sanitizeCommand(command) {
   return `sh -c ${JSON.stringify(command)}`;
 }
 
-function createDockerCommand(command, { volumeConfigsArray, environmentVariables }) {
-  const volumesString = createDockerVolumesString(volumeConfigsArray);
-  const environmentVariablesString = createEnvironmentVariablesString(environmentVariables);
+function createDockerCommand(command, {
+  volumeConfigsArray,
+  environmentVariables,
+  workingDirectory,
+}) {
+  const volumeArguments = createDockerVolumeArguments(volumeConfigsArray);
+  const environmentVariableArguments = createEnvironmentVariableArguments(environmentVariables);
+  const workingDirectoryArguments = workingDirectory && ["-w", workingDirectory];
 
-  return (
-    `docker run --rm \
-    ${environmentVariablesString} \
-    ${volumesString} \
-    ${ANSIBLE_DOCKER_IMAGE} ${command}`
-  );
+  const dockerCommandArguments = ["docker", "run", "--rm"];
+
+  if (environmentVariableArguments) {
+    dockerCommandArguments.push(...environmentVariableArguments);
+  }
+  if (volumeArguments) {
+    dockerCommandArguments.push(...volumeArguments);
+  }
+  if (workingDirectoryArguments) {
+    dockerCommandArguments.push(...workingDirectoryArguments);
+  }
+  dockerCommandArguments.push(ANSIBLE_DOCKER_IMAGE, command);
+
+  return dockerCommandArguments.join(" ");
 }
 
 module.exports = {

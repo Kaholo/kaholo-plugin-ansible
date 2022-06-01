@@ -1,15 +1,15 @@
-const { generateRandomString } = require("./helpers");
+const { generateRandomTemporaryPath, generateRandomEnvironmentVariableName } = require("./helpers");
 
-function createEnvironmentVariablesString(environmentVariables = []) {
+function createEnvironmentVariableArguments(environmentVariables = []) {
   return environmentVariables.map(
-    (environmentVariable) => `-e ${environmentVariable}`,
-  ).join(" ");
+    (environmentVariable) => ["-e", environmentVariable],
+  ).flat();
 }
 
-function createDockerVolumesString(volumeConfigs = []) {
+function createDockerVolumeArguments(volumeConfigs = []) {
   return volumeConfigs.map(
-    ({ path, mountPoint }) => `-v $${path}:$${mountPoint}`,
-  ).join(" ");
+    ({ path, mountPoint }) => ["-v", `$${path}:$${mountPoint}`],
+  ).flat();
 }
 
 function createDockerVolumeConfig(path) {
@@ -25,16 +25,8 @@ function createDockerVolumeConfig(path) {
   };
 }
 
-function generateRandomEnvironmentVariableName() {
-  return `KAHOLO_ANSIBLE_PLUGIN_ENV_${generateRandomString()}`;
-}
-
-function generateRandomTemporaryPath() {
-  return `/tmp/kaholo_ansible_plugin_tmp_${generateRandomString()}`;
-}
-
 module.exports = {
   createDockerVolumeConfig,
-  createDockerVolumesString,
-  createEnvironmentVariablesString,
+  createDockerVolumeArguments,
+  createEnvironmentVariableArguments,
 };
