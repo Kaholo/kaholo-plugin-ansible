@@ -7,9 +7,27 @@
   "execProgram": "node",
   "imgUrl": "icon.png",
   "main": "app.js",
-  "version": "2.0.0",
-  "category": ["CONFIGURATION MGMT", "CI/CD"],
+  "version": "2.1.0",
+  "category": ["CONFIGURATION MGMT"],
+  "keywords": [
+    "ansible",
+    "configuration",
+    "code",
+    "provision",
+    "deployment",
+    "agentless",
+    "infrastructure",
+    "iac",
+    "declarative",
+    "tower",
+    "red hat"
+  ],
   "methods": [
+    {
+      "name": "checkAnsibleVersion",
+      "viewName": "Check Ansible Version",
+      "params": []
+    },
     {
       "name" : "runPlaybook",
       "viewName" : "Run Playbook",

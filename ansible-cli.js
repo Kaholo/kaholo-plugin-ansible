@@ -12,9 +12,9 @@ const { logToActivityLog } = require("./helpers");
 const exec = promisify(childProcess.exec);
 
 async function execute({
-  params,
-  additionalArguments,
   command,
+  params = {},
+  additionalArguments = [],
 }) {
   const volumeConfigsMap = createVolumeConfigsMap(params);
   const volumeConfigsArray = [...volumeConfigsMap.values()].flat();
@@ -25,7 +25,7 @@ async function execute({
 
   const ansibleCommandParams = {
     playbookName: params.playbookName,
-    sshPassword: params.sshCredentials.password,
+    sshPassword: params.sshCredentials?.password,
   };
   if (volumeConfigsMap.has("vaultPasswordFile")) {
     ansibleCommandParams.vaultPasswordFile = `$${volumeConfigsMap.get("vaultPasswordFile").mountPoint}`;

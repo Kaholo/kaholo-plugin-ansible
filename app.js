@@ -2,6 +2,12 @@ const path = require("path");
 const kaholoPluginLibrary = require("@kaholo/plugin-library");
 const { execute } = require("./ansible-cli");
 
+function checkAnsibleVersion() {
+  return execute({
+    command: "ansible-playbook --version",
+  });
+}
+
 async function runPlaybook({
   playbookPath,
   sshPassword,
@@ -39,5 +45,6 @@ async function runPlaybook({
 }
 
 module.exports = kaholoPluginLibrary.bootstrap({
+  checkAnsibleVersion,
   runPlaybook,
 });
