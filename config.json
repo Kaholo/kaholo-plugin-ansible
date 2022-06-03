@@ -11,6 +11,11 @@
   "category": ["CONFIGURATION MGMT", "CI/CD"],
   "methods": [
     {
+      "name": "checkAnsibleVersion",
+      "viewName": "Check Ansible Version",
+      "params": []
+    },
+    {
       "name" : "runPlaybook",
       "viewName" : "Run Playbook",
       "params":[
