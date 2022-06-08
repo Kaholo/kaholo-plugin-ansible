@@ -1,3 +1,4 @@
+const _ = require("lodash");
 const path = require("path");
 const kaholoPluginLibrary = require("@kaholo/plugin-library");
 const { execute } = require("./ansible-cli");
@@ -11,6 +12,7 @@ function checkAnsibleVersion() {
 async function runPlaybook({
   playbookPath,
   sshPassword,
+  sshPrivateKey,
   additionalArguments,
   vaultPasswordFile,
 }) {
@@ -23,17 +25,26 @@ async function runPlaybook({
     },
   };
   if (sshPassword) {
-    executionPayload.params.sshCredentials = {
-      password: sshPassword,
-    };
+    executionPayload.params.sshPassword = sshPassword;
+  }
+
+  const secretFileContents = {};
+  if (vaultPasswordFile) {
+    secretFileContents.vaultPasswordFile = [vaultPasswordFile];
+  }
+  if (sshPrivateKey) {
+    secretFileContents.sshPrivateKey = [sshPrivateKey];
   }
 
   let executionResult;
-  if (vaultPasswordFile) {
-    await kaholoPluginLibrary.helpers.temporaryFileSentinel(
-      [vaultPasswordFile],
-      async (filePath) => {
-        executionPayload.params.vaultPasswordFile = filePath;
+  if (!_.isEmpty(secretFileContents)) {
+    await kaholoPluginLibrary.helpers.multipleTemporaryFilesSentinel(
+      secretFileContents,
+      async (secretFilePaths) => {
+        executionPayload.params = {
+          ...executionPayload.params,
+          ...secretFilePaths,
+        };
         executionResult = await execute(executionPayload);
       },
     );
