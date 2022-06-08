@@ -25,10 +25,13 @@ async function execute({
 
   const ansibleCommandParams = {
     playbookName: params.playbookName,
-    sshPassword: params.sshCredentials?.password,
+    sshPassword: params.sshPassword,
   };
   if (volumeConfigsMap.has("vaultPasswordFile")) {
     ansibleCommandParams.vaultPasswordFile = `$${volumeConfigsMap.get("vaultPasswordFile").mountPoint}`;
+  }
+  if (volumeConfigsMap.has("sshPrivateKey")) {
+    ansibleCommandParams.sshPrivateKey = `$${volumeConfigsMap.get("sshPrivateKey").mountPoint}`;
   }
 
   const ansibleCommand = createAnsibleCommand(command, ansibleCommandParams, additionalArguments);
@@ -55,6 +58,9 @@ function createVolumeConfigsMap(params) {
   if (params.vaultPasswordFile) {
     volumeConfigsMap.set("vaultPasswordFile", createDockerVolumeConfig(params.vaultPasswordFile));
   }
+  if (params.sshPrivateKey) {
+    volumeConfigsMap.set("sshPrivateKey", createDockerVolumeConfig(params.sshPrivateKey));
+  }
 
   return volumeConfigsMap;
 }
@@ -64,6 +70,7 @@ function createAnsibleCommand(
   {
     playbookName,
     sshPassword,
+    sshPrivateKey,
     vaultPasswordFile,
   },
   additionalArguments = [],
@@ -72,9 +79,8 @@ function createAnsibleCommand(
   const preArguments = [];
   const ansibleCommandVariables = {};
 
-  if (sshPassword) {
+  if (sshPassword || sshPrivateKey) {
     ansibleCommandVariables.ansible_connection = "ssh";
-    ansibleCommandVariables.ansible_ssh_pass = sshPassword;
 
     // Host authenticity checking requires user
     // to type "yes" in shell and in a Docker container
@@ -82,6 +88,12 @@ function createAnsibleCommand(
     // variable is needed otherwise the ansible-playbook
     // fails with "Host key verification failed." error
     preArguments.push("ANSIBLE_HOST_KEY_CHECKING=False");
+  }
+  if (sshPassword) {
+    ansibleCommandVariables.ansible_ssh_pass = sshPassword;
+  }
+  if (sshPrivateKey) {
+    ansibleCommandVariables.ansible_ssh_private_key_file = sshPrivateKey;
   }
   if (vaultPasswordFile) {
     postArguments.push("--vault-password-file", vaultPasswordFile);

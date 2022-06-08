@@ -53,6 +53,12 @@
           "type": "vault"
         },
         {
+          "name": "sshPrivateKey",
+          "viewName": "SSH Private Key",
+          "description": "Private Key to authenticate SSH connections.",
+          "type": "vault"
+        },
+        {
           "name": "additionalArguments",
           "viewName": "Additional Command Line Arguments",
           "description": "Additional command arguments appended at the end of the generated command, one argument per line.",
