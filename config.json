@@ -24,9 +24,25 @@
   ],
   "methods": [
     {
-      "name": "checkAnsibleVersion",
-      "viewName": "Check Ansible Version",
-      "params": []
+      "name": "runCommand",
+      "viewName": "Run Command",
+      "params": [
+        {
+          "name": "workingDirectory",
+          "viewName": "Working Directory",
+          "description": "Directory on agent to cwd to, if needed, prior to running the command.",
+          "placeholder": "/home/ansible/",
+          "type": "string"
+        },
+        {
+          "name": "command",
+          "viewName": "Command",
+          "description": "Ansible Playbook Command to Run.",
+          "placeholder": "ansible-playbook --version",
+          "type": "text",
+          "required": true
+        }
+      ]
     },
     {
       "name" : "runPlaybook",

@@ -37,7 +37,7 @@ async function execute({
   const ansibleCommand = createAnsibleCommand(command, ansibleCommandParams, additionalArguments);
   const sanitizedAnsibleCommand = sanitizeCommand(ansibleCommand);
   const dockerCommand = createDockerCommand(sanitizedAnsibleCommand, {
-    workingDirectory: `$${volumeConfigsMap.get("playbookDirectory").mountPoint}`,
+    workingDirectory: `$${volumeConfigsMap.get("workingDirectory").mountPoint}`,
     environmentVariables: Object.keys(environmentVariables),
     volumeConfigsArray,
   });
@@ -52,7 +52,7 @@ async function execute({
 
 function createVolumeConfigsMap(params) {
   const volumeConfigsMap = new Map([
-    ["playbookDirectory", createDockerVolumeConfig(params.playbookDirectory)],
+    ["workingDirectory", createDockerVolumeConfig(params.workingDirectory)],
   ]);
 
   if (params.vaultPasswordFile) {
@@ -112,7 +112,7 @@ function createAnsibleCommand(
     finalCommand = `${finalCommand} ${postArguments.join(" ")}`;
   }
 
-  return finalCommand;
+  return finalCommand.trim();
 }
 
 function sanitizeCommand(command) {
@@ -126,7 +126,6 @@ function createDockerCommand(command, {
 }) {
   const volumeArguments = createDockerVolumeArguments(volumeConfigsArray);
   const environmentVariableArguments = createEnvironmentVariableArguments(environmentVariables);
-  const workingDirectoryArguments = workingDirectory && ["-w", workingDirectory];
 
   const dockerCommandArguments = ["docker", "run", "--rm"];
 
@@ -136,8 +135,8 @@ function createDockerCommand(command, {
   if (volumeArguments) {
     dockerCommandArguments.push(...volumeArguments);
   }
-  if (workingDirectoryArguments) {
-    dockerCommandArguments.push(...workingDirectoryArguments);
+  if (workingDirectory) {
+    dockerCommandArguments.push("-w", workingDirectory);
   }
   dockerCommandArguments.push(ANSIBLE_DOCKER_IMAGE, command);
 
