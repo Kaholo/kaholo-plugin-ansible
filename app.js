@@ -24,7 +24,7 @@ async function runPlaybook({
     additionalArguments,
     params: {
       playbookName: path.basename(playbookPath),
-      workingDirectory: path.dirname(playbookPath),
+      workingDirectory: path.dirname(path.resolve(playbookPath)),
     },
   };
   if (sshPassword) {
