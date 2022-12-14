@@ -36,7 +36,7 @@ async function runPlaybook({
     secretFileContents.vaultPasswordFile = [vaultPasswordFile];
   }
   if (sshPrivateKey) {
-    secretFileContents.sshPrivateKey = [sshPrivateKey];
+    secretFileContents.sshPrivateKey = [`${sshPrivateKey}\n`];
   }
 
   let executionResult;
