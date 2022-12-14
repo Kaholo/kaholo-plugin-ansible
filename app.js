@@ -13,7 +13,7 @@ function runCommand({ command, workingDirectory }) {
 }
 
 async function runPlaybook({
-  playbookPath,
+  playbookPath = "./site.yml",
   sshPassword,
   sshPrivateKey,
   additionalArguments,
