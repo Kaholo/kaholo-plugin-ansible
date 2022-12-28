@@ -41,7 +41,6 @@ async function execute({
     environmentVariables: Object.keys(environmentVariables),
     volumeConfigsArray,
   });
-  logToActivityLog(`Generated Docker command: ${dockerCommand}`);
 
   const { stdout, stderr } = await exec(dockerCommand, {
     env: environmentVariables,

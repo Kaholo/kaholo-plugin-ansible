@@ -80,7 +80,7 @@
           "description": "Additional command arguments appended at the end of the generated command, one argument per line.",
           "type": "text",
           "parserType": "array",
-          "placeholder": "-vv\n--syntax-check"
+          "placeholder": "-vvv"
         }
       ]
     }
