@@ -13,7 +13,7 @@ function runCommand({ command, workingDirectory }) {
 }
 
 async function runPlaybook({
-  playbookPath,
+  playbookPath = "./site.yml",
   sshPassword,
   sshPrivateKey,
   additionalArguments,
@@ -24,7 +24,7 @@ async function runPlaybook({
     additionalArguments,
     params: {
       playbookName: path.basename(playbookPath),
-      workingDirectory: path.dirname(playbookPath),
+      workingDirectory: path.dirname(path.resolve(playbookPath)),
     },
   };
   if (sshPassword) {
@@ -36,7 +36,7 @@ async function runPlaybook({
     secretFileContents.vaultPasswordFile = [vaultPasswordFile];
   }
   if (sshPrivateKey) {
-    secretFileContents.sshPrivateKey = [sshPrivateKey];
+    secretFileContents.sshPrivateKey = [`${sshPrivateKey}\n`];
   }
 
   let executionResult;

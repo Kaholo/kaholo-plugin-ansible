@@ -41,13 +41,19 @@ async function execute({
     environmentVariables: Object.keys(environmentVariables),
     volumeConfigsArray,
   });
-  logToActivityLog(`Generated Docker command: ${dockerCommand}`);
 
-  return exec(dockerCommand, {
+  const { stdout, stderr } = await exec(dockerCommand, {
     env: environmentVariables,
   }).catch((error) => {
     throw new Error(error.stdout || error.stderr || error.message || error);
   });
+
+  if (stderr && !stdout) {
+    throw new Error(stderr);
+  } else if (stderr) {
+    console.error(stderr);
+  }
+  return stdout;
 }
 
 function createVolumeConfigsMap(params) {
