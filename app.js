@@ -1,10 +1,11 @@
 const _ = require("lodash");
 const path = require("path");
 const kaholoPluginLibrary = require("@kaholo/plugin-library");
-const { execute } = require("./ansible-cli");
+
+const ansibleCli = require("./ansible-cli");
 
 function runCommand({ command, workingDirectory }) {
-  return execute({
+  return ansibleCli.execute({
     command,
     params: {
       workingDirectory,
@@ -48,11 +49,11 @@ async function runPlaybook({
           ...executionPayload.params,
           ...secretFilePaths,
         };
-        executionResult = await execute(executionPayload);
+        executionResult = await ansibleCli.execute(executionPayload);
       },
     );
   } else {
-    executionResult = await execute(executionPayload);
+    executionResult = await ansibleCli.execute(executionPayload);
   }
 
   return executionResult;

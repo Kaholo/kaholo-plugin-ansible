@@ -1,15 +1,12 @@
-const { promisify } = require("util");
-const childProcess = require("child_process");
 const _ = require("lodash");
-const { ANSIBLE_DOCKER_IMAGE } = require("./consts.json");
+
 const {
   createDockerVolumeConfig,
   createDockerVolumeArguments,
   createEnvironmentVariableArguments,
 } = require("./docker-helpers");
-const { logToActivityLog } = require("./helpers");
-
-const exec = promisify(childProcess.exec);
+const { ANSIBLE_DOCKER_IMAGE } = require("./consts.json");
+const { asyncExec } = require("./helpers");
 
 async function execute({
   command,
@@ -42,11 +39,21 @@ async function execute({
     volumeConfigsArray,
   });
 
-  const { stdout, stderr } = await exec(dockerCommand, {
-    env: environmentVariables,
-  }).catch((error) => {
-    throw new Error(error.stdout || error.stderr || error.message || error);
+  const {
+    stdout,
+    stderr,
+    error,
+  } = await asyncExec({
+    command: dockerCommand,
+    onProgressFn: console.info,
+    options: {
+      env: environmentVariables,
+    },
   });
+
+  if (error) {
+    throw new Error(error.stdout || error.stderr || error.message || error);
+  }
 
   if (stderr && !stdout) {
     throw new Error(stderr);
