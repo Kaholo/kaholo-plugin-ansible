@@ -1,6 +1,7 @@
 const _ = require("lodash");
-const { access } = require("fs/promises");
 const fs = require("fs");
+const childProcess = require("child_process");
+const { promisify } = require("util");
 
 function generateRandomString() {
   return Math.random().toString(36).slice(2);
@@ -23,7 +24,7 @@ async function validatePaths(paths) {
 
 async function pathExists(path) {
   try {
-    await access(path, fs.constants.F_OK);
+    await fs.promises.access(path, fs.constants.F_OK);
     return true;
   } catch {
     return false;
@@ -38,12 +39,53 @@ function generateRandomTemporaryPath() {
   return `/tmp/kaholo_ansible_plugin_tmp_${generateRandomString()}`;
 }
 
-function logToActivityLog(message) {
-  // TODO: Change console.error to console.info
-  // Right now (Kaholo v4.2.3) console.info
-  // does not print messages to Activity Log
-  // Jira ticket: https://kaholo.atlassian.net/browse/KAH-3636
-  console.error(message);
+async function asyncExec(params) {
+  const {
+    command,
+    onProgressFn,
+    options = {},
+  } = params;
+
+  let childProcessError;
+  let childProcessInstance;
+  try {
+    childProcessInstance = childProcess.exec(command, options);
+  } catch (error) {
+    return { error };
+  }
+
+  const outputChunks = [];
+
+  childProcessInstance.stdout.on("data", (data) => {
+    outputChunks.push({ type: "stdout", data });
+
+    onProgressFn?.(data);
+  });
+  childProcessInstance.stderr.on("data", (data) => {
+    outputChunks.push({ type: "stderr", data });
+
+    onProgressFn?.(data);
+  });
+  childProcessInstance.on("error", (error) => {
+    childProcessError = error;
+  });
+
+  try {
+    await promisify(childProcessInstance.on.bind(childProcessInstance))("close");
+  } catch (error) {
+    childProcessError = error;
+  }
+
+  const outputObject = outputChunks.reduce((acc, cur) => ({
+    ...acc,
+    [cur.type]: `${acc[cur.type]}\n${cur.data.toString()}`,
+  }), { stdout: "", stderr: "" });
+
+  if (childProcessError) {
+    outputObject.error = childProcessError;
+  }
+
+  return outputObject;
 }
 
 module.exports = {
@@ -51,5 +93,5 @@ module.exports = {
   generateRandomString,
   generateRandomEnvironmentVariableName,
   generateRandomTemporaryPath,
-  logToActivityLog,
+  asyncExec,
 };

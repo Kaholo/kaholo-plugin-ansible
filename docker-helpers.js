@@ -1,4 +1,7 @@
-const { generateRandomTemporaryPath, generateRandomEnvironmentVariableName } = require("./helpers");
+const {
+  generateRandomTemporaryPath,
+  generateRandomEnvironmentVariableName,
+} = require("./helpers");
 
 function createEnvironmentVariableArguments(environmentVariables = []) {
   return environmentVariables.map(
