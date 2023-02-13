@@ -30,8 +30,8 @@
         {
           "name": "workingDirectory",
           "viewName": "Working Directory",
-          "description": "Directory on agent to cwd to, if needed, prior to running the command.",
-          "placeholder": "/home/ansible/",
+          "description": "Directory on Kaholo agent where command will run. (Optional)",
+          "placeholder": "myrepo/ansible/test-book",
           "type": "string"
         },
         {
