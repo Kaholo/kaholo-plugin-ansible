@@ -19,6 +19,7 @@ async function runPlaybook({
   sshPrivateKey,
   additionalArguments,
   vaultPasswordFile,
+  helperVars,
 }) {
   const executionPayload = {
     command: "ansible-playbook",
@@ -28,6 +29,9 @@ async function runPlaybook({
       workingDirectory: path.dirname(path.resolve(playbookPath)),
     },
   };
+  if (helperVars) {
+    executionPayload.params.helperVars = true;
+  }
   if (sshPassword) {
     executionPayload.params.sshPassword = sshPassword;
   }

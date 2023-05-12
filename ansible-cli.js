@@ -19,11 +19,13 @@ async function execute({
   // This is same as setting host_key_checking = False in ansible.cfg in the playbook
   // ANSIBLE_FORCE_COLOR is for color output in Activity log
   // This is hard (impossible?) to override so boolean parameter needed to opt OUT of these defaults
-  const injectedVariables = {
-    "ANSIBLE_HOST_KEY_CHECKING": "False",
-    "ANSIBLE_FORCE_COLOR": "True"
+  let injectedVariables = {};
+  if (params.helperVars) {
+    injectedVariables = {
+      ANSIBLE_HOST_KEY_CHECKING: "False",
+      ANSIBLE_FORCE_COLOR: "True",
+    };
   }
-
   const environmentVariables = volumeConfigsArray.reduce((acc, curr) => ({
     ...acc,
     ...curr.environmentVariables,
@@ -62,7 +64,11 @@ async function execute({
   });
 
   if (error) {
-    throw new Error(error.stdout || error.stderr || error.message || error);
+    if (error === 4) {
+      console.error("A host is not reachable. Ensure SSH key is in the right place on the Kaholo agent, security on the file is read-only (chmod 400 key.pem), and that strict host key checking is disabled, e.g. in ansible.cfg.");
+    } else {
+      throw new Error(error.stdout || error.stderr || error.message || error);
+    }
   }
 
   if (stderr && !stdout) {
