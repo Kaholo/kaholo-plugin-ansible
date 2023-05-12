@@ -15,9 +15,19 @@ async function execute({
 }) {
   const volumeConfigsMap = createVolumeConfigsMap(params);
   const volumeConfigsArray = [...volumeConfigsMap.values()].flat();
+  // ANSIBLE_HOST_KEY_CHECKING averts common default where only known hosts can be reached by ssh
+  // This is same as setting host_key_checking = False in ansible.cfg in the playbook
+  // ANSIBLE_FORCE_COLOR is for color output in Activity log
+  // This is hard (impossible?) to override so boolean parameter needed to opt OUT of these defaults
+  const injectedVariables = {
+    "ANSIBLE_HOST_KEY_CHECKING": "False",
+    "ANSIBLE_FORCE_COLOR": "True"
+  }
+
   const environmentVariables = volumeConfigsArray.reduce((acc, curr) => ({
     ...acc,
     ...curr.environmentVariables,
+    ...injectedVariables,
   }), {});
 
   const ansibleCommandParams = {
@@ -89,18 +99,10 @@ function createAnsibleCommand(
   additionalArguments = [],
 ) {
   const postArguments = [playbookName];
-  const preArguments = [];
   const ansibleCommandVariables = {};
 
   if (sshPassword || sshPrivateKey) {
     ansibleCommandVariables.ansible_connection = "ssh";
-
-    // Host authenticity checking requires user
-    // to type "yes" in shell and in a Docker container
-    // it fails instantaneously for some reason, ANSIBLE_HOST_KEY_CHECKING
-    // variable is needed otherwise the ansible-playbook
-    // fails with "Host key verification failed." error
-    preArguments.push("ANSIBLE_HOST_KEY_CHECKING=False");
   }
   if (sshPassword) {
     ansibleCommandVariables.ansible_ssh_pass = sshPassword;
@@ -118,9 +120,6 @@ function createAnsibleCommand(
   postArguments.push(...additionalArguments);
 
   let finalCommand = baseCommand;
-  if (preArguments.length > 0) {
-    finalCommand = `${preArguments.join(" ")} ${finalCommand}`;
-  }
   if (postArguments.length > 0) {
     finalCommand = `${finalCommand} ${postArguments.join(" ")}`;
   }
