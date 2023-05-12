@@ -81,6 +81,13 @@
           "type": "text",
           "parserType": "array",
           "placeholder": "-vvv"
+        },
+        {
+          "name": "helperVars",
+          "viewName": "Use Helper Variables",
+          "description": "Let the plugin force color output and disable host key checking for you.",
+          "type": "boolean",
+          "default": true
         }
       ]
     }
