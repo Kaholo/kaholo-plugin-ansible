@@ -78,7 +78,7 @@ async function asyncExec(params) {
 
   const outputObject = outputChunks.reduce((acc, cur) => ({
     ...acc,
-    [cur.type]: `${acc[cur.type]}\n${cur.data.toString()}`,
+    [cur.type]: `${acc[cur.type]}${cur.data.toString()}`,
   }), { stdout: "", stderr: "" });
 
   if (childProcessError) {

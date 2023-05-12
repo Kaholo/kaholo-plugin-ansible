@@ -57,7 +57,7 @@ async function execute({
     error,
   } = await asyncExec({
     command: dockerCommand,
-    onProgressFn: console.info,
+    onProgressFn: process.stdout.write.bind(process.stdout),
     options: {
       env: environmentVariables,
     },
@@ -76,7 +76,6 @@ async function execute({
   } else if (stderr) {
     console.error(stderr);
   }
-  return stdout;
 }
 
 function createVolumeConfigsMap(params) {

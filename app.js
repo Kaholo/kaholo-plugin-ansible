@@ -44,7 +44,6 @@ async function runPlaybook({
     secretFileContents.sshPrivateKey = [`${sshPrivateKey}\n`];
   }
 
-  let executionResult;
   if (!_.isEmpty(secretFileContents)) {
     await kaholoPluginLibrary.helpers.multipleTemporaryFilesSentinel(
       secretFileContents,
@@ -53,14 +52,12 @@ async function runPlaybook({
           ...executionPayload.params,
           ...secretFilePaths,
         };
-        executionResult = await ansibleCli.execute(executionPayload);
+        await ansibleCli.execute(executionPayload);
       },
     );
   } else {
-    executionResult = await ansibleCli.execute(executionPayload);
+    await ansibleCli.execute(executionPayload);
   }
-
-  return executionResult;
 }
 
 module.exports = kaholoPluginLibrary.bootstrap({
