@@ -7,7 +7,7 @@
   "execProgram": "node",
   "imgUrl": "logo.png",
   "main": "app.js",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "category": ["Configuration Management"],
   "keywords": [
     "ansible",
@@ -81,6 +81,13 @@
           "type": "text",
           "parserType": "array",
           "placeholder": "-vvv"
+        },
+        {
+          "name": "helperVars",
+          "viewName": "Use Helper Variables",
+          "description": "Let the plugin force color output and disable host key checking for you.",
+          "type": "boolean",
+          "default": true
         }
       ]
     }
