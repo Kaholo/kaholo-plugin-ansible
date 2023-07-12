@@ -9,7 +9,7 @@
   "author": "Amit Alon",
   "license": "ISC",
   "dependencies": {
-    "@kaholo/plugin-library": "^2.3.1",
+    "@kaholo/plugin-library": "^2.3.2",
     "lodash": "4.17.21"
   },
   "devDependencies": {
