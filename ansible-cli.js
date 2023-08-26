@@ -51,31 +51,13 @@ async function execute({
     volumeConfigsArray,
   });
 
-  const {
-    stdout,
-    stderr,
-    error,
-  } = await asyncExec({
+  return asyncExec({
     command: dockerCommand,
     onProgressFn: process.stdout.write.bind(process.stdout),
     options: {
       env: environmentVariables,
     },
   });
-
-  if (error) {
-    if (error === 4) {
-      console.error("A host is not reachable. Ensure SSH key is in the right place on the Kaholo agent, security on the file is read-only (chmod 400 key.pem), and that strict host key checking is disabled, e.g. in ansible.cfg.");
-    } else {
-      throw new Error(error.stdout || error.stderr || error.message || error);
-    }
-  }
-
-  if (stderr && !stdout) {
-    throw new Error(stderr);
-  } else if (stderr) {
-    console.error(stderr);
-  }
 }
 
 function createVolumeConfigsMap(params) {

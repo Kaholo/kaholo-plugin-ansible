@@ -3,8 +3,9 @@ const path = require("path");
 const kaholoPluginLibrary = require("@kaholo/plugin-library");
 
 const ansibleCli = require("./ansible-cli");
+const { EMPTY_FINAL_RESULT_VALUE } = require("./consts.json");
 
-function runCommand({ command, workingDirectory }) {
+async function runCommand({ command, workingDirectory }) {
   return ansibleCli.execute({
     command,
     params: {
@@ -58,6 +59,7 @@ async function runPlaybook({
   } else {
     await ansibleCli.execute(executionPayload);
   }
+  return (EMPTY_FINAL_RESULT_VALUE);
 }
 
 module.exports = kaholoPluginLibrary.bootstrap({

@@ -3,6 +3,8 @@ const fs = require("fs");
 const childProcess = require("child_process");
 const { promisify } = require("util");
 
+const { EMPTY_FINAL_RESULT_VALUE } = require("./consts.json");
+
 function generateRandomString() {
   return Math.random().toString(36).slice(2);
 }
@@ -54,16 +56,10 @@ async function asyncExec(params) {
     return { error };
   }
 
-  const outputChunks = [];
-
   childProcessInstance.stdout.on("data", (data) => {
-    outputChunks.push({ type: "stdout", data });
-
     onProgressFn?.(data);
   });
   childProcessInstance.stderr.on("data", (data) => {
-    outputChunks.push({ type: "stderr", data });
-
     onProgressFn?.(data);
   });
   childProcessInstance.on("error", (error) => {
@@ -76,16 +72,14 @@ async function asyncExec(params) {
     childProcessError = error;
   }
 
-  const outputObject = outputChunks.reduce((acc, cur) => ({
-    ...acc,
-    [cur.type]: `${acc[cur.type]}${cur.data.toString()}`,
-  }), { stdout: "", stderr: "" });
-
   if (childProcessError) {
-    outputObject.error = childProcessError;
+    if (childProcessError === 4) {
+      console.error("A host is not reachable. Consider using parameter \"Use Helper Variables\" to disable host key checking. Ensure SSH key is correct and host reachable on the Kaholo agent's network.");
+    }
+    throw new Error(childProcessError);
   }
 
-  return outputObject;
+  return (EMPTY_FINAL_RESULT_VALUE);
 }
 
 module.exports = {
