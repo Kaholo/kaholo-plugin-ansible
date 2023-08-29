@@ -1,3 +1,4 @@
 {
-  "ANSIBLE_DOCKER_IMAGE": "willhallonline/ansible"
+  "ANSIBLE_DOCKER_IMAGE": "willhallonline/ansible",
+  "EMPTY_FINAL_RESULT_VALUE": ""
 }

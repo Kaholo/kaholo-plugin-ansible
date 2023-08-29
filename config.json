@@ -26,6 +26,7 @@
     {
       "name": "runCommand",
       "viewName": "Run Command",
+      "allowEmptyResult": true,
       "params": [
         {
           "name": "workingDirectory",
@@ -47,6 +48,7 @@
     {
       "name" : "runPlaybook",
       "viewName" : "Run Playbook",
+      "allowEmptyResult": true,
       "params":[
         {
           "name": "playbookPath",
