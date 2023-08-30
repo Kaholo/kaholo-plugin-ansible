@@ -7,7 +7,7 @@
   "execProgram": "node",
   "imgUrl": "logo.png",
   "main": "app.js",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "category": ["Configuration Management"],
   "keywords": [
     "ansible",
@@ -26,6 +26,7 @@
     {
       "name": "runCommand",
       "viewName": "Run Command",
+      "allowEmptyResult": true,
       "params": [
         {
           "name": "workingDirectory",
@@ -47,6 +48,7 @@
     {
       "name" : "runPlaybook",
       "viewName" : "Run Playbook",
+      "allowEmptyResult": true,
       "params":[
         {
           "name": "playbookPath",
